@@ -4,7 +4,7 @@ const mongoose = require('mongoose'),
 const userSchema = new Schema({
   'userId': String,
   'userName': String,
-  'userPwd': Number,
+  'userPwd': String,
   'orderList': Array,
   'cartList': [
     {
