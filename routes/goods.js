@@ -3,7 +3,7 @@ const router = express.Router()
 const mongoose = require('mongoose')
 const Goods = require('../models/goods')
 mongoose.connect('mongodb://118.89.201.107/db_demo?authSource=admin',{useMongoClient: true})
-
+// mongoose.connection.openUri('mongodb://118.89.201.107/db_demo?authSource=admin', {useMongoClient: true})
 mongoose.connection.on('connected', () => {
   console.log('MongoDB connected success')
 })

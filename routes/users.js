@@ -3,8 +3,8 @@ var router = express.Router();
 const User = require('../models/user')
 /* GET users listing. */
 router.get('/', function(req, res, next) {
-  res.send('with resource');
-});
+  res.send('with resource')
+})
 
 router.post('/login',(req, res, next) => {
   const param = {}
@@ -18,9 +18,12 @@ router.post('/login',(req, res, next) => {
         msg: err.message
       })
     } else {
-      console.log(userDoc)
       if (userDoc) {
         res.cookie('userId', userDoc.userId, {
+          path: '/',
+          maxAge: 1000 * 60 * 60
+        })
+        res.cookie('userName', userDoc.userName, {
           path: '/',
           maxAge: 1000 * 60 * 60
         })
@@ -35,10 +38,14 @@ router.post('/login',(req, res, next) => {
       }
     }
   })
-});
+})
 
 router.post('/logout', (req, res, next) => {
   res.cookie('userId', '', {
+    path: '/',
+    maxAge: -1
+  })
+  res.cookie('userName', '', {
     path: '/',
     maxAge: -1
   })
@@ -48,6 +55,223 @@ router.post('/logout', (req, res, next) => {
     result: ''
   })
 })
+
+router.get('/checkLongin', (req, res, next) => {
+  if (req.cookies.userId) {
+    res.json({
+      status: '0',
+      msg: '',
+      result: req.cookies.userName
+    })
+  } else {
+    res.json({
+      status: '1',
+      msg: '未登录',
+      result: ''
+    })
+  }
+})
+
+router.get('/cartList', (req, res, next) => {
+  let userId = req.cookies.userId
+  User.findOne({userId: userId}, (err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      if (doc) {
+        res.json({
+          status: '0',
+          msg: '',
+          result: doc.cartList
+        })
+      }
+    }
+  })
+
+})
+
+router.post('/cartDel', (req, res, next) => {
+  let userId = req.cookies.userId
+  let productId = req.body.productId
+  User.update({userId: userId}, {$pull: {'cartList': { productId }}} ,(err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      if (doc) {
+        res.json({
+          status: '0',
+          msg: '',
+          result: 'suc'
+        })
+      }
+    }
+  })
+})
+
+router.post('/cartEdit', (req, res, next) => {
+  let userId = req.cookies.userId
+  let productId = req.body.productId
+  let productNum = req.body.productNum
+  let checked = req.body.checked
+  User.update({userId: userId, 'cartList.productId': productId }, {'cartList.$.productNum' : productNum, 'cartList.$.checked': checked}, (err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      if (doc) {
+        res.json({
+          status: '0',
+          msg: '',
+          result: 'suc'
+        })
+      }
+    }
+  })
+})
+
+router.post('/editCheckAll', (req, res, next) => {
+  let userId = req.cookies.userId
+  let checkAll = req.body.checkAll ? '1' : '0'
+  User.findOne({userId: userId}, (err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      if (doc) {
+        for (let item of doc.cartList) {
+          item.checked = checkAll
+        }
+        doc.save((err1, save) => {
+          if (err1) {
+            res.json({
+              status: '1',
+              msg: err1.message,
+              result: ''
+            })
+          } else {
+            res.json({
+              status: '0',
+              msg: '',
+              result: 'suc'
+            })
+          }
+        }) 
+      }
+    }
+  })
+})
+
+router.get('/addressList', (req, res, next) => {
+  let userId = req.cookies.userId
+  User.findOne({userId: userId}, (err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      res.json({
+        status: '0',
+        msg: '',
+        result: doc.addressList
+      })
+    }
+  })
+})
+
+router.post('/setDefault', (req, res, next) => {
+  let userId = req.cookies.userId
+  let addressId = req.body.addressId
+  if (!addressId) {
+    res.json({
+      status: '1003',
+      msg: 'addressId is null',
+      result: ''
+    })
+  } else {
+    User.findOne({userId: userId}, (err, doc) => {
+      if (err) {
+        res.json({
+          status: '1',
+          msg: err.message,
+          result: ''
+        })
+      } else {
+        if (doc) {
+          let addressList = doc.addressList
+          for (let item of addressList) {
+            if (item.addressId === addressId) {
+              item.isDefault = true
+            } else {
+              item.isDefault = false
+            }
+          }
+          doc.save((err1, doc1) => {
+            if (err1) {
+              res.json({
+                status: '1',
+                msg: err.message,
+                result: ''
+              })
+            } else {
+              res.json({
+                status: '0',
+                msg: '',
+                result: 'suc'
+              })
+            }
+          })
+        }
+      }
+    })
+  }
+ 
+})
+
+
+router.post('/delAddress', (req, res, next) => {
+  let userId = req.cookies.userId
+  let addressId = req.body.addressId
+  User.update({userId: userId}, {$pull: {'addressList': { addressId }}} ,(err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      if (doc) {
+        res.json({
+          status: '0',
+          msg: '',
+          result: 'suc'
+        })
+      }
+    }
+  })
+ 
+})
+
+
+
+
+
+
 
 module.exports = router;
 
