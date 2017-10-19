@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 const User = require('../models/user')
+require('../util/util')
 /* GET users listing. */
 router.get('/', function(req, res, next) {
   res.send('with resource')
@@ -267,9 +268,127 @@ router.post('/delAddress', (req, res, next) => {
  
 })
 
+router.post('/payMent', (req, res, next) => {
+  let userId = req.cookies.userId
+  let orderTotal = req.body.orderTotal
+  let addressId = req.body.addressId
+  if (!orderTotal) {
+    res.json({
+      status: '1003',
+      msg: 'orderTotal is null',
+      result: ''
+    })
+  } else {
+    User.findOne({userId: userId}, (err, doc) => {
+      if (err) {
+        res.json({
+          status: '1',
+          msg: err.message,
+          result: ''
+        })
+      } else {
+        if (doc) {
+          // 获取当前用户的地址信息
+          let address = ''
+          let addressList = doc.addressList
+          for (let item of addressList) {
+            if (item.addressId === addressId) {
+              address = item
+            }
+          }
+          // 获取用户购物车的购买商品
+          let goodsList = []
+          for (let item of doc.cartList) {
+            if (item.checked === '1') {
+              goodsList.push(item)
+            }
+          }
+          let r1 = Math.floor(Math.random() * 10)
+          let r2 = Math.floor(Math.random() * 10)
+          let platform = '622'
+          let sysDate = new Date().Format('yyyyMMddhhmmss')
+          let createDate = new Date().Format('yyyy-MM-dd hh:mm:ss')
+          let orderId = platform + r1 + sysDate + r2
+          let order = {
+            orderId: orderId,
+            orderTotal: orderTotal,
+            addressInfo: address,
+            goodsList: goodsList,
+            orderStatus: '1',
+            createDate: createDate
+          }
+          doc.orderList.push(order)
+          doc.save((err1, doc1) => {
+            if (err1) {
+              res.json({
+                status: '1',
+                msg: err.message,
+                result: ''
+              })
+            } else {
+              res.json({
+                status: '0',
+                msg: '',
+                result: {
+                  orderId: order.orderId,
+                  orderTotal: order.orderTotal
+                }
+              })
+            }
+          })
+        }
+      }
+    })
+  }
+ 
+})
 
 
-
+router.get('/orderDetail', (req, res, next) => {
+  let userId = req.cookies.userId
+  let orderId = req.param('orderId')
+  User.findOne({ userId } ,(err, doc) => {
+    if (err) {
+      res.json({
+        status: '1',
+        msg: err.message,
+        result: ''
+      })
+    } else {
+      let orderList = doc.orderList
+      if (orderList.length > 0) {
+        let orderTotal = 0
+        for (let item of orderList) {
+          if (item.orderId === orderId) {
+            orderTotal = item.orderTotal
+          }
+        }
+        if (orderTotal > 0) {
+          res.json({
+            status: '0',
+            msg: '',
+            result: {
+              orderId: orderId,
+              orderTotal: orderTotal
+            }
+          })
+        } else {
+          res.json({
+            status: '120002',
+            msg: '无此订单',
+            result: ''
+          })
+        }
+      } else {
+        res.json({
+          status: '120001',
+          msg: '当前用户未创建订单',
+          result: ''
+        })
+      }
+    }
+  })
+})
 
 
 
